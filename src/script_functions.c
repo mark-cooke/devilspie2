@@ -59,7 +59,9 @@
 
 #include "error_strings.h"
 
-#define DEPRECATED() fprintf(stderr, "warning: deprecated function %s called\n", __func__ + 2);
+#include "logger.h"
+
+#define DEPRECATED() logger_err_printf("warning: deprecated function %s called\n", __func__ + 2);
 
 /**
  *
@@ -712,16 +714,16 @@ int c_debug_print(lua_State *lua)
 		const char *s = lua_tostring(lua, -1);  /* get result */
 		if (s == NULL)
 			return luaL_error(lua, "'tostring' must return a string to 'print'");
-		if (i > 1) {
-			if (devilspie2_debug) fputs("\t", stdout);
-		}
-		if (devilspie2_debug) fputs(s, stdout);
+
+		if (i > 1)
+			logger_printf("\t%s", s);
+		else
+			logger_print(s);
+
 		lua_pop(lua, 1);  /* pop result */
 	}
-	if (devilspie2_debug) {
-		fputs("\n", stdout);
-		fflush(stdout);
-	}
+	logger_print("\n");
+	fflush(stdout);
 
 	return 0;
 }
@@ -911,6 +913,47 @@ int c_get_window_is_decorated(lua_State *lua)
 
 	return 1;
 }
+int c_get_active_workspace(lua_State *lua)
+{
+	if (!check_param_count(lua, "c_get_active_workspace", 0)) {
+		return 0;
+	}
+	WnckWindow *window = get_current_window();
+	if(window == NULL) {
+		g_printerr("No Current Window");
+		return -1;
+	}
+	WnckWorkspace * workspace = wnck_screen_get_active_workspace(wnck_window_get_screen(window));
+	if(workspace == NULL) {
+		g_printerr("No Screen for Current Window");
+		return -1;
+	}
+	
+	lua_pushinteger(lua, wnck_workspace_get_number(workspace) + 1 );
+	lua_pushstring(lua, wnck_workspace_get_name(workspace));
+
+	return 2;
+}
+
+int c_get_window_workspace(lua_State *lua)
+{
+	if (!check_param_count(lua, "c_get_window_workspace", 0)) {
+		return 0;
+	}
+	WnckWindow *window = get_current_window();
+	if(window == NULL) {
+		return -1;
+	}
+	WnckWorkspace * workspace = wnck_window_get_workspace(window);
+	if(workspace == NULL) {
+		return -1;
+	}
+	
+	lua_pushinteger(lua, wnck_workspace_get_number(workspace) + 1); // Workspace indices in Lua are 1-based
+	lua_pushstring(lua, wnck_workspace_get_name(workspace));
+
+	return 2;
+}
 
 /**
  Given a workspace name, perform a linear, case-sensitive search for
@@ -974,17 +1017,25 @@ int c_set_window_workspace(lua_State *lua)
 		default: break;
 	}
 
+	if (workspace_idx0 == -1){
+		lua_pushboolean(lua, FALSE);
+		return 1;
+	}
+
 	WnckWindow *window = get_current_window();
 
 	if (window && workspace_idx0 > -1) {
 		WnckScreen *screen = wnck_window_get_screen(window);
+		WnckWorkspace *current_ws = wnck_window_get_workspace(window);
 		WnckWorkspace *workspace = wnck_screen_get_workspace(screen, workspace_idx0);
 
 		if (!workspace) {
 			g_warning(_("Workspace number %d does not exist!"), workspace_idx0+1);
 		}
 		if (!devilspie2_emulate) {
-			wnck_window_move_to_workspace(window, workspace);
+			if(current_ws != workspace) { // Avoid a no-op
+				wnck_window_move_to_workspace(window, workspace);
+			}
 		}
 	}
 
@@ -1069,6 +1120,57 @@ int c_get_workspace_count(lua_State *lua)
 	lua_pushinteger(lua, count);
 
 	return 1;
+}
+
+/**
+ * Returns 2 tables listing all workspaces, keyed by name, keyed by Id
+ * If workspaces cannot be obtained, 2 empty tables will be returned
+ */
+int c_get_workspaces(lua_State *lua)
+{
+	WnckWindow *window = get_current_window();
+	if(window == NULL) {
+		lua_newtable(lua);
+		lua_newtable(lua);
+		return 2;
+	}
+	
+	WnckScreen *screen = wnck_window_get_screen(window);
+	if(screen == NULL) {
+		lua_newtable(lua);
+		lua_newtable(lua);
+		return 2;
+	}
+
+	GList * workspaces = wnck_screen_get_workspaces(screen);
+	GList * workspaces_id = workspaces;
+
+	// Keyed on name
+	lua_newtable(lua);
+	while (workspaces) {
+		WnckWorkspace *workspace = workspaces->data;
+		const char * name = wnck_workspace_get_name(workspace);
+		int id = wnck_workspace_get_number(workspace) + 1;
+		lua_pushinteger(lua, id);
+		lua_setfield(lua, -2, name);
+		
+		workspaces = workspaces->next;
+	}
+
+	// Keyed on ID 
+	lua_newtable(lua);
+	workspaces = workspaces_id;
+	while (workspaces) {
+		WnckWorkspace *workspace = workspaces->data;
+		const char * name = wnck_workspace_get_name(workspace);
+		int id = wnck_workspace_get_number(workspace) + 1;
+		lua_pushstring(lua, name);
+		lua_rawseti(lua, -2, id);
+
+		workspaces = workspaces->next;
+	}
+
+	return 2;
 }
 
 

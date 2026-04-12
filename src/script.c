@@ -35,6 +35,7 @@
 #include "compat.h"
 #include "intl.h"
 #include "script.h"
+#include "logger.h"
 
 #if (GTK_MAJOR_VERSION >= 3)
 #define HAVE_GTK3
@@ -53,15 +54,39 @@ gboolean devilspie2_emulate = FALSE;
 lua_State *global_lua_state = NULL;
 
 /**
+As the script folder is configurable and doesn't _have_ to be the working directory, Lua's default search path
+(package.path) for "require"s won't help much (as it uses "./?.lua" and "./?/init.lua").
+This function adds <script_folder>/?.lua and <script_folder>/?/init.lua to enable the use of "requires" in scripts.
+ */
+void configureLuaPaths(lua_State *lua, gchar * script_folder)
+{
+	const char PACKAGE_CMD[] = "package.path = package.path .. ';%s;%s'";
+	const uint NUM_SEPS = 3;
+
+	gchar * file = g_build_filename(script_folder, "?.lua", NULL);
+	gchar * mod = g_build_filename(script_folder, "?", "init.lua", NULL);
+	gulong maxlen = strlen(file) + strlen(mod) + sizeof(PACKAGE_CMD) + (NUM_SEPS * 3);
+	gchar buff[maxlen];
+	if ( maxlen >= g_snprintf(buff, maxlen, PACKAGE_CMD, file, mod) )
+	{
+		(void)luaL_dostring(lua, buff);
+	}
+	g_free(file);
+	g_free(mod);
+}
+
+/**
  *
  */
 lua_State *
-init_script()
+init_script(gchar * script_folder)
 {
 	lua_State *lua = luaL_newstate();
 	luaL_openlibs(lua);
 
 	register_cfunctions(lua);
+
+	configureLuaPaths(lua, script_folder);
 
 	return lua;
 }
@@ -112,9 +137,12 @@ register_cfunctions(lua_State *lua)
 	DP2_REGISTER(lua, decorate_window);
 	DP2_REGISTER(lua, undecorate_window);
 
+	DP2_REGISTER(lua, get_window_workspace);
 	DP2_REGISTER(lua, set_window_workspace);
 	DP2_REGISTER(lua, change_workspace);
 	DP2_REGISTER(lua, get_workspace_count);
+	DP2_REGISTER(lua, get_active_workspace);
+	DP2_REGISTER(lua, get_workspaces);
 
 	DP2_REGISTER(lua, pin_window);
 	DP2_REGISTER(lua, unpin_window);
@@ -244,6 +272,7 @@ static ATTR_MALLOC gchar *error_add_backtrace(lua_State *lua, const char *msg)
 	return g_strdup(msg);
 }
 
+#ifndef _DEBUG
 static ATTR_MALLOC gchar *error_add_location(lua_State* lua, const char *msg)
 {
 	lua_Debug state;
@@ -274,6 +303,7 @@ static void check_timeout_script(lua_State *lua, lua_Debug *state)
 	g_free(msg);
 	lua_error(lua);
 }
+#endif
 
 static int script_error(lua_State *lua)
 {
@@ -305,14 +335,14 @@ run_script(lua_State *lua, const char *filename)
 
 	if (result) {
 		// We got an error, print it
-		printf(_("Error: %s\n"), lua_tostring(lua, -1));
+		logger_err_printf(_("Error: %s\n"), lua_tostring(lua, -1));
 		lua_remove(lua, errpos); // unstack the error handler
 		lua_pop(lua, 1);
 		return -1;
 	}
 
 	// Okay, loaded the script; now run it
-
+#ifndef _DEBUG
 	struct sigaction newact, oldact;
 	newact.sa_handler = timeout_script;
 	sigemptyset(&newact.sa_mask);
@@ -322,17 +352,17 @@ run_script(lua_State *lua, const char *filename)
 	lua_sethook(lua, check_timeout_script, LUA_MASKCOUNT, 1);
 	sigaction(SIGALRM, &newact, &oldact);
 	alarm(SCRIPT_TIMEOUT_SECONDS);
-
+#endif
 	int s = lua_pcall(lua, 0, LUA_MULTRET, errpos);
-
+#ifndef _DEBUG
 	alarm(0);
 	sigaction(SIGALRM, &oldact, NULL);
-
+#endif
 	lua_remove(lua, errpos); // unstack the error handler
 
 	if (s) {
 		// no info to add here; just output the error
-		printf(_("Error: %s\n"), lua_tostring(lua, -1));
+		logger_err_printf(_("Error: %s\n"), lua_tostring(lua, -1));
 		lua_pop(lua, 1); // else we leak it
 	}
 
@@ -352,3 +382,36 @@ done_script(lua_State *lua)
 	//lua=NULL;
 }
 
+lua_State * reinit_script(lua_State *lua, gchar * script_folder)
+{
+	done_script(lua);
+	return init_script(script_folder);
+}
+
+/**
+ * Given a module name, ask lua if it is a loaded module in the given Lua VM
+ */
+gboolean is_module_loaded(lua_State * lua, const gchar * module_name)
+{
+	if( lua == NULL ) return FALSE;
+
+	const char PACKAGE_CMD[] = "return package.loaded['%s']";
+
+	gulong maxlen = strlen(module_name) + sizeof(PACKAGE_CMD);
+	gchar buff[maxlen];
+	if ( maxlen >= g_snprintf(buff, maxlen, PACKAGE_CMD, module_name) )
+	{
+		if ( luaL_dostring(lua, buff ) ) {
+			return FALSE;  // Couldn't even call into Lua, something is wrong, just let things fail elsewhere
+		}
+
+		if( lua_istable(lua, -1) )  // Loaded modules will normally be a table
+		{
+			lua_pop(lua, -1);
+			return TRUE;
+		}
+		// But really simple modules that return nothing may just be a boolean value to indicate that they have been loaded
+		if( lua_isboolean(lua, -1) && lua_toboolean(lua, -1) == TRUE) return TRUE;
+	}
+	return FALSE;
+}

@@ -22,8 +22,10 @@
 
 #if defined(__GNUC__) || defined(__clang__)
 # define ATTR_MALLOC __attribute__((malloc))
+# define ATTR_FORMAT_PRINTF(fmt, args) __attribute__((format(printf, fmt, args)))
 #else
 # define ATTR_MALLOC
+# define ATTR_FORMAT_PRINTF(fmt, args)
 #endif
 
 #endif /* __HEADER_COMPAT_ */

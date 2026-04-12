@@ -6,10 +6,10 @@
 .\"
 .TH devilspie2 1 "" ""
 .SH NAME
-Devilspie2 \- perform scripted actions on windows when certain events occur
+Devil's Pie 2 \- perform scripted actions on windows when certain events occur
 .SH Description
 .P
-.B Devilspie2
+.B Devil's Pie 2
 is a program that detects windows as they are created, gain or lose focus or
 have their titles changed, and performs scripted actions on them. The
 scripts are written in \fILua\fR, allowing a great deal of customisation.
@@ -17,14 +17,30 @@ scripts are written in \fILua\fR, allowing a great deal of customisation.
 .SH Options
 .TP
 \fB\-v\fR, \fB\-\-version
-Displays the version of Devilspie2.
+Displays the version of Devil's Pie 2.
 .TP
 \fB\-f \fIfolder\fR, \fB\-\-folder \fIfolder
 Sets the folder where the Lua scripts are loaded from.
 .TP
 \fB\-d\fR, \fB\-\-debug
-Shows debug information from the Lua scripts. If debug_print is used in the Lua
-scripts, that output will only be printed to stdout if this option is used.
+Shows debug information from the Lua scripts. If \fIdebug_print\fR is used
+in the Lua scripts, it will output to stdout.
+.TP
+\fB\-D\fR, \fB\-\-debug\-fifo
+Copy stdout & send debug info to a FIFO. If \fIdebug_print\fR is used in
+the Lua scripts, it will output to the FIFO. This is intended for running
+dæmonised while allowing access to debug text etc. at need.
+
+Nothing is output to the FIFO if nothing is reading it.
+You can read it using a program such as \fBcat\fR.
+
+\fB\-\-debug\fR and \fB\-\-debug\-fifo\fR may be used together.
+.TP
+\fB\-P\fR, \fB\-\-print\-fifo
+Print the FIFO's file name then exit. This may be used as follows:
+.EX
+cat "$(devilspie2 \-\-print\-fifo)"
+.EE
 .TP
 \fB\-e\fR, \fB\-\-emulate
 Emulation mode. This prevents windows from being affected by the scripts,
@@ -41,14 +57,25 @@ See
 .I /usr/share/doc/devilspie2/README.md
 for a detailed description of the commands recognised in Lua scripts.
 
+.SH Files
+.TP
+.B $XDG_RUNTIME_DIR/devilspie2\-$DISPLAY
+.TP
+.B $TMPDIR/devilspie2\-$DISPLAY
+.TP
+.B /tmp/devilspie2\-$DISPLAY
+These are the possible locations of the FIFO which is created if
+\fB\-\-debug\-fifo\fR is used. The first one for which the referenced
+environment variables are set is used.
+
 .SH Author
 .P
-.B Devilspie2
+.B Devil's Pie 2
 is maintained by 
 .MT devspam@moreofthesa.me.uk
 Darren Salt
 .ME . It was written by
 .MT andreas@ronnquist.net
 Andreas Rönnquist
-.ME , and is based on Devilspie by Ross
+.ME , and is based on Devil's Pie by Ross
 Burton.

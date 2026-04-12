@@ -37,6 +37,7 @@
 
 #include "script.h"
 #include "script_functions.h"
+#include "logger.h"
 
 #include "error_strings.h"
 
@@ -53,7 +54,11 @@
 GMainLoop *loop = NULL;
 
 static gboolean debug = FALSE;
+static gboolean logtofifo = FALSE;
 static gboolean emulate = FALSE;
+
+static gboolean show_fifo = FALSE;
+
 static gboolean show_version = FALSE;
 
 // libwnck Version Information is only availible if you have
@@ -82,21 +87,18 @@ static void load_list_of_scripts(WnckScreen *screen G_GNUC_UNUSED, WnckWindow *w
 	set_current_window(window);
 
 	// for every file in the folder - load the script
-	if (event_lists[W_OPEN] != NULL) {
+	while(temp_file_list) {
+		gchar *filename = (gchar*)temp_file_list->data;
 
-		while(temp_file_list) {
-			gchar *filename = (gchar*)temp_file_list->data;
+		// is it a Lua file?
+		if (g_str_has_suffix((gchar*)filename, ".lua")) {
 
-			// is it a Lua file?
-			if (g_str_has_suffix((gchar*)filename, ".lua")) {
+			// init the script, run it
+			if (!run_script(global_lua_state, filename))
+				/**/;
 
-				// init the script, run it
-				if (!run_script(global_lua_state, filename))
-					/**/;
-
-			}
-			temp_file_list=temp_file_list->next;
 		}
+		temp_file_list=temp_file_list->next;
 	}
 	return;
 
@@ -218,7 +220,7 @@ static void signal_handler(int sig)
 /**
  *
  */
-void print_list(GSList *list)
+static void print_list(GSList *list)
 {
 	GSList *temp_list;
 	if (list != NULL) {
@@ -229,7 +231,7 @@ void print_list(GSList *list)
 
 			if (file_name) {
 				if (g_str_has_suffix((gchar*)file_name, ".lua")) {
-					printf("%s\n", (gchar*)file_name);
+					logger_printf("%s\n", (gchar*)file_name);
 				}
 			}
 			temp_list = temp_list->next;
@@ -241,34 +243,51 @@ void print_list(GSList *list)
 /**
  *
  */
-void print_script_lists()
+static void print_script_lists()
 {
 	gboolean have_any_files = FALSE;
 	win_event_type i;
 
-	if (debug)
-		printf("------------\n");
+	logger_print("------------\n");
 
 	for (i = 0; i < W_NUM_EVENTS; i++) {
 		if (event_lists[i])
 			have_any_files = TRUE;
 		// If we are running debug mode - print the list of files:
-		if (debug) {
-			printf(_("List of Lua files handling \"%s\" events in folder:"),
-				   event_names[i]);
-			printf("\n");
-			if (event_lists[i]) {
-				print_list(event_lists[i]);
-			}
+		logger_printf(_("List of Lua files handling \"%s\" events in folder:\n"),
+		              event_names[i]);
+		if (event_lists[i]) {
+			print_list(event_lists[i]);
 		}
 	}
 
 	if (!have_any_files) {
-		printf("%s\n\n", _("No script files found in the script folder - exiting."));
+		logger_err_printf("%s\n\n", _("No script files found in the script folder - exiting."));
 		exit(EXIT_SUCCESS);
 	}
 }
 
+/**
+Reload the config and re-initialise the Lua VM
+ */
+void refresh_config_and_script()
+{
+	clear_file_lists();
+	set_current_window(NULL);
+	
+	if (load_config(config_filename) != 0) {
+		logger_print_always("Configuration file cannot be re-loaded. Processing will not continue until the error is corrected.\n");
+		return;
+	}
+	
+	global_lua_state = reinit_script(global_lua_state, script_folder);
+
+	logger_print("Files in folder updated!\n - new lists:\n\n");
+
+	print_script_lists();
+
+	logger_print("-----------\n");
+}
 
 /**
  *
@@ -279,24 +298,11 @@ void folder_changed_callback(GFileMonitor *mon G_GNUC_UNUSED,
                              GFileMonitorEvent event,
                              gpointer user_data)
 {
-	gchar *our_filename = (gchar*)(user_data);
-
 	// If a file is created or deleted, we need to check the file lists again
 	if ((event == G_FILE_MONITOR_EVENT_CREATED) ||
-	    (event == G_FILE_MONITOR_EVENT_DELETED)) {
-
-		clear_file_lists();
-
-		set_current_window(NULL);
-		load_config(our_filename);
-
-		if (debug)
-			printf("Files in folder updated!\n - new lists:\n\n");
-
-		print_script_lists();
-
-		if (debug)
-			printf("-----------\n");
+	    (event == G_FILE_MONITOR_EVENT_DELETED))
+	{
+		refresh_config_and_script();
 	}
 
 	// Also monitor if our devilspie2.lua file is changed - since it handles
@@ -304,23 +310,26 @@ void folder_changed_callback(GFileMonitor *mon G_GNUC_UNUSED,
 	if (event == G_FILE_MONITOR_EVENT_CHANGED) {
 		if (first_file) {
 			gchar *short_filename = g_file_get_basename(first_file);
+			gchar *full_path = g_file_get_path(first_file);
 
-			if (g_strcmp0(short_filename, "devilspie2.lua")==0) {
-
-				clear_file_lists();
-
-				set_current_window(NULL);
-				load_config(our_filename);
-
-				print_script_lists();
-
-				if (debug)
-					printf("----------");
+			if (g_strcmp0(short_filename, "devilspie2.lua")==0)
+			{
+				refresh_config_and_script();
 			}
+			else if( g_str_has_suffix((gchar*)short_filename, ".lua") && is_in_any_list(full_path) == FALSE)
+			{	// May be a module file 
+				gchar * module_name = g_utf8_substring(short_filename, 0, strlen(short_filename) - 4);
+				if(is_module_loaded(global_lua_state, module_name) == TRUE)
+				{
+					global_lua_state = reinit_script(global_lua_state, script_folder);
+				}
+				g_free(module_name);
+			}
+			g_free(short_filename);
+			g_free(full_path);
 		}
 	}
 }
-
 
 /**
  * Program main entry
@@ -330,6 +339,12 @@ int main(int argc, char *argv[])
 	static const GOptionEntry options[]= {
 		{ "debug",        'd', 0, G_OPTION_ARG_NONE,   &debug,
 		  N_("Print debug info to stdout"), NULL
+		},
+		{ "debug-fifo",   'D', 0, G_OPTION_ARG_NONE,   &logtofifo,
+		  N_("Print debug info & copy stdout to a FIFO"), NULL
+		},
+		{ "print-fifo",   'P', 0, G_OPTION_ARG_NONE,   &show_fifo,
+		  N_("Print the debug FIFO's file name then quit"), NULL
 		},
 		{ "emulate",      'e', 0, G_OPTION_ARG_NONE,   &emulate,
 		  N_("Don't apply any rules, only emulate execution"), NULL
@@ -373,30 +388,9 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
-	gdk_init(&argc, &argv);
-
-	g_free(full_desc_string);
-	g_free(devilspie2_description);
-
-	// if the folder is NULL, default to ~/.config/devilspie2/
-	if (script_folder == NULL) {
-
-		temp_folder = g_build_path(G_DIR_SEPARATOR_S,
-		                           g_get_user_config_dir(),
-		                           "devilspie2",
-		                           NULL);
-
-		// check if the folder does exist
-		if (!g_file_test(temp_folder, G_FILE_TEST_IS_DIR)) {
-
-			// - and if it doesn't, create it.
-			if (g_mkdir(temp_folder, 0700) != 0) {
-				printf("%s\n", _("Couldn't create the default folder for devilspie2 scripts."));
-				exit(EXIT_FAILURE);
-			}
-		}
-
-		script_folder = temp_folder;
+	if (show_fifo) {
+		puts(logger_get_fifo_name());
+		exit(EXIT_SUCCESS);
 	}
 
 	gboolean shown = FALSE;
@@ -429,6 +423,34 @@ int main(int argc, char *argv[])
 	}
 	if (shown)
 		exit(0);
+
+	gdk_init(&argc, &argv);
+
+	g_free(full_desc_string);
+	g_free(devilspie2_description);
+	g_option_context_free(context);
+	
+	// if the folder is NULL, default to ~/.config/devilspie2/
+	if (script_folder == NULL) {
+
+		temp_folder = g_build_path(G_DIR_SEPARATOR_S,
+		                           g_get_user_config_dir(),
+		                           "devilspie2",
+		                           NULL);
+
+		// check if the folder does exist
+		if (!g_file_test(temp_folder, G_FILE_TEST_IS_DIR)) {
+
+			// - and if it doesn't, create it.
+			if (g_mkdir(temp_folder, 0700) != 0) {
+				printf("%s\n", _("Couldn't create the default folder for devilspie2 scripts."));
+				exit(EXIT_FAILURE);
+			}
+		}
+
+		script_folder = temp_folder;
+	}
+
 
 #if (GTK_MAJOR_VERSION >= 3)
 	if (!GDK_IS_X11_DISPLAY(gdk_display_get_default())) {
@@ -481,6 +503,7 @@ int main(int argc, char *argv[])
 //	mon = g_file_monitor_directory(directory_file, G_FILE_MONITOR_WATCH_MOUNTS,
 	mon = g_file_monitor_directory(directory_file, G_FILE_MONITOR_NONE,
 	                               NULL, NULL);
+	g_object_unref(directory_file);
 	if (!mon) {
 		printf("%s\n", _("Couldn't create directory monitor!"));
 		return EXIT_FAILURE;
@@ -489,10 +512,12 @@ int main(int argc, char *argv[])
 	g_signal_connect(mon, "changed", G_CALLBACK(folder_changed_callback),
 	                 (gpointer)(config_filename));
 
-	global_lua_state = init_script();
+	global_lua_state = init_script(script_folder);
+	if (logtofifo)
+		logger_create(global_lua_state);
 	print_script_lists();
 
-	if (debug) printf("------------\n");
+	logger_print("------------\n");
 
 	// remove stuff cleanly
 	atexit(devilspie_exit);

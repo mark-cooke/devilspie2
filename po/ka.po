@@ -1,0 +1,194 @@
+# Georgian translation for devilspie2.
+# Copyright (C) 2026 devilspie2's authors.
+# This file is distributed under the same license as the devilspie2 package.
+# Ekaterine Papava <papava.e@gtu.ge>, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: devilspie2 0.45\n"
+"Report-Msgid-Bugs-To: devspam@moreofthesa.me.uk\n"
+"POT-Creation-Date: 2024-10-18 22:13+0100\n"
+"PO-Revision-Date: 2026-04-11 05:39+0200\n"
+"Last-Translator: Ekaterine Papava <papava.e@gtu.ge>\n"
+"Language-Team: Georgian <(nothing)>\n"
+"Language: ka\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Poedit 3.9\n"
+
+#: config.c:193
+msgid "script_folder isn't a folder."
+msgstr "script_folder საქაღალდე არაა."
+
+#: config.c:204 script.c:261
+#, c-format
+msgid "Error: %s\n"
+msgstr "შეცდომა: %s\n"
+
+#: devilspie2.c:210
+msgid "Received signal:"
+msgstr "მიღებული სიგნალი!:"
+
+#: devilspie2.c:259
+#, c-format
+msgid "List of Lua files handling \"%s\" events in folder:"
+msgstr "\"%s\"-ის მოვლენების დამმუშავებელი Lua-ის ფაილების სია საქაღალდეში:"
+
+#: devilspie2.c:269
+msgid "No script files found in the script folder - exiting."
+msgstr "სკრიპტების საქაღალდეში სკრიპტის ფაილები აღმოჩენილი არაა - მუშაობის დასრულება."
+
+#: devilspie2.c:334
+msgid "Print debug info to stdout"
+msgstr "გამართვის ინფორმაციის გამოტანა stdout-ზე"
+
+#: devilspie2.c:337
+msgid "Don't apply any rules, only emulate execution"
+msgstr "წესები გამოყენებული არ იქნება. მხოლოდ, მოხდება, გაშვების ემულაცია"
+
+#: devilspie2.c:340
+msgid "Search for scripts in this folder"
+msgstr "სკრიპტების ძებნა ამ საქაღალდეში"
+
+#: devilspie2.c:340
+msgid "FOLDER"
+msgstr "საქაღალდე"
+
+#: devilspie2.c:343
+msgid "Show Devilspie2 version and quit"
+msgstr "Devilspie2-ის ვერსიის გამოტანა და გასვლა"
+
+#: devilspie2.c:348
+msgid "Show libwnck version and quit"
+msgstr "libwnck-ის ვერსიის ჩვენება და გასვლა"
+
+#: devilspie2.c:351
+msgid "Show Lua version and quit"
+msgstr "Lua-ის ვერსიის ჩვენება და გასვლა"
+
+#: devilspie2.c:366
+msgid "apply rules on windows"
+msgstr "წესების გადატარება ფანჯრებზე"
+
+#: devilspie2.c:373
+#, c-format
+msgid "option parsing failed: %s"
+msgstr "პარამეტრების დამუშავება ჩავარდა: %s"
+
+#: devilspie2.c:396
+msgid "Couldn't create the default folder for devilspie2 scripts."
+msgstr "devilspie2-ის სკრიპტებისთვის ნაგულისხმევი საქაღალდის შექმნა ჩავარდა."
+
+#: devilspie2.c:437
+msgid "An X11 display is required for devilspie2."
+msgstr "devilspie2-ს X11-ის ეკრანის სჭირდება."
+
+#: devilspie2.c:444
+msgid "Couldn't init script error messages!"
+msgstr "სკრიპტის შეცდომის შეტყობინებების ინიციალიზაცია შეუძლებელია!"
+
+#: devilspie2.c:464
+msgid "Running devilspie2 in debug and emulate mode."
+msgstr "devilspie2 გაშვებულია გამართვის და ემულაციის რეჟიმში."
+
+#: devilspie2.c:466
+msgid "Running devilspie2 in debug mode."
+msgstr "devilspie2 გაშვებულია გამართვის რეჟიმში."
+
+#: devilspie2.c:469
+#, c-format
+msgid "Using scripts from folder: %s"
+msgstr "გამოიყენება სკრიპტები საქაღალდიდან: %s"
+
+#: devilspie2.c:485
+msgid "Couldn't create directory monitor!"
+msgstr "საქაღალდის მონიტორის შექმნა შეუძლებელია!"
+
+#: script_functions.c:996 script_functions.c:1049
+#, c-format
+msgid "A workspace with the name '%s' does not exist!"
+msgstr "სამუშაო სივრცე სახელით '%s' არ არსებობს!"
+
+#: script_functions.c:1009 script_functions.c:1061
+#, c-format
+msgid "Workspace number %d does not exist!"
+msgstr "სამუშაო სივრცე ნომრით %d არ არსებობს!"
+
+#: xutils.c:195 xutils.c:213 error_strings.c:85
+msgid "Failed!"
+msgstr "წარუმატებელია!"
+
+#: xutils.c:743
+msgid "Could not get workspace"
+msgstr "სამუშაო სივრცის მიღება შეუძლებელია"
+
+#: error_strings.c:52
+msgid "Couldn't allocate error string!"
+msgstr "შეცდომის შეტყობინებისთვის მეხსიერების გამოყოფა შეუძლებელია!"
+
+#: error_strings.c:63
+msgid "No parameters expected"
+msgstr "პარამეტრების არ მოველოდი"
+
+#: error_strings.c:64
+msgid "One parameter expected"
+msgstr "მოველოდი ერთ პარამეტრს"
+
+#: error_strings.c:65
+msgid "Two parameters expected"
+msgstr "მოველოდი ორ პარამეტრს"
+
+#: error_strings.c:66
+msgid "Three parameters expected"
+msgstr "მოველოდი სამ პარამეტრს"
+
+#: error_strings.c:67
+msgid "Four parameters expected"
+msgstr "მოველოდი ოთხ პარამეტრს"
+
+#: error_strings.c:69
+#, c-format
+msgid "%d or %d parameters expected"
+msgstr "მოველოდი %d, ან %d პარამეტრს"
+
+#: error_strings.c:70
+#, c-format
+msgid "%d to %d parameters expected"
+msgstr "მოველოდი %d-დან %d-მდე პარამეტრს"
+
+#: error_strings.c:72
+msgid "At least four parameters expected"
+msgstr "მოველოდი, სულ ცოტა, ოთხ პარამეტრს"
+
+#: error_strings.c:74
+msgid "Number expected as parameter"
+msgstr "პარამეტრად მოველოდი რიცხვს"
+
+#: error_strings.c:75
+msgid "Boolean expected as parameter"
+msgstr "პარამეტრად მოველოდი ლოგიკურ მნიშვნელობას"
+
+#: error_strings.c:76
+msgid "String expected as parameter"
+msgstr "პარამეტრად მოველოდი სტრიქრონს"
+
+#: error_strings.c:78
+msgid "Number or string expected as parameter"
+msgstr "პარამეტრად მოველოდი რიცხვს, ან სტრიქონს"
+
+#: error_strings.c:79
+msgid "Number or string or boolean expected as parameter"
+msgstr "პარამეტრად მოველოდი რიცხვის, სტრიქონს, ან ლოგიკურ მნიშვნელობას"
+
+#: error_strings.c:81
+msgid "Integer greater than zero expected"
+msgstr "მოველოდი ნულზე მეტ მთელ რიცხვს"
+
+#: error_strings.c:82
+msgid "Could not find current viewport"
+msgstr "მიმდინარე ხედის წერტილის პოვნა შეუძლებელია"
+
+#: error_strings.c:83
+msgid "Setting viewport failed"
+msgstr "ხედის წერტილის დაყენება ჩავარდა"
