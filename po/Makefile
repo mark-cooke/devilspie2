@@ -3,19 +3,7 @@
 # $Id$
 #
 
-
-ifndef PREFIX
-	ifdef INSTALL_PREFIX
-		PREFIX=$(INSTALL_PREFIX)
-	else
-		PREFIX=/usr/local
-	endif
-endif
-
-NAME = devilspie2
-VERSION = $(shell cat ../VERSION)
-DATADIR = ${DESTDIR}${PREFIX}/share
-LOCALEDIR = ${DATADIR}/locale
+include ../Make.vars
 
 SOURCES = config.c devilspie2.c script.c script_functions.c xutils.c error_strings.c
 
@@ -25,20 +13,26 @@ LANGUAGES = sv fr pt_BR nl ru fi ja it ka
 LANGUAGES_MO = $(foreach currlang,$(LANGUAGES),$(currlang).mo)
 LANGUAGES_PO = $(foreach currlang,$(LANGUAGES),$(currlang).po)
 
+# Quiet!
+$(eval $(call make_V,GETTEXT))
+$(eval $(call make_V,MSGMERGE))
+$(eval $(call make_V,MSGFMT,,$(LANGUAGES_PO)))
+
 all: build
 
 ${NAME}.pot:
-	xgettext ${XG_ARGS} --directory=../src/ ${SOURCES} -d ${NAME} -o ./${NAME}.pot
+	$(V_GETTEXT)xgettext ${XG_ARGS} --directory=../src/ ${SOURCES} -d ${NAME} -o ./${NAME}.pot
 
 update-pot: ${NAME}.pot
 
 %.pox: %.po
-	msgmerge -o $@ --previous $< ${NAME}.pot
+	$(V_MSGMERGE)msgmerge -o $@ --previous $< ${NAME}.pot
 
 build: $(LANGUAGES_MO)
 
 $(LANGUAGES_MO): $(LANGUAGES_PO)
-	for po in ${LANGUAGES}; \
+	$(V_MSGFMT)
+	$(V_at)for po in ${LANGUAGES}; \
 	do msgfmt -v --statistics -c -o t-$${po} $${po}.po && mv -f t-$${po} $${po}.mo; \
 	done
 

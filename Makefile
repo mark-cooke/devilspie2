@@ -18,6 +18,8 @@
 # If not, see <http://www.gnu.org/licenses/>.
 #
 
+include Make.vars
+
 ifndef CC
 	CC=gcc
 endif
@@ -45,26 +47,6 @@ endif
 DEPEND=Makefile.dep
 
 OBJECTS=$(OBJ)/config.o $(OBJ)/devilspie2.o $(OBJ)/xutils.o $(OBJ)/script.o $(OBJ)/script_functions.o $(OBJ)/error_strings.o $(OBJ)/logger.o
-
-ifndef PREFIX
-	ifdef INSTALL_PREFIX
-		PREFIX=$(INSTALL_PREFIX)
-	else
-		PREFIX=/usr/local
-	endif
-endif
-
-NAME = devilspie2
-PROG=$(BIN)/$(NAME)
-VERSION = $(shell cat ./VERSION)
-DATADIR = ${DESTDIR}${PREFIX}/share
-LOCALEDIR = ${DATADIR}/locale
-MANDIR = ${DATADIR}/man
-# /etc if installing in /usr, else ${PREFIX}/etc
-# if this isn't right, submit a patch
-ETCDIR = ${DESTDIR}$(if $(patsubst /usr,,${PREFIX}),${PREFIX},)/etc
-APPDIR = ${ETCDIR}/xdg/autostart
-MANPAGE = ${NAME}.1
 
 ifdef GTK2
 	PKG_GTK=gtk+-2.0
@@ -112,6 +94,11 @@ endif
 
 LOCAL_CFLAGS+=-DLOCALEDIR=\"$(LOCALEDIR)\" -DPACKAGE=\"$(NAME)\" -DDEVILSPIE2_VERSION=\"$(VERSION)\"
 
+# Quiet!
+$(eval $(call make_V,GEN))
+$(eval $(call make_V,CC))
+$(eval $(call make_V,DEP,CC))
+
 .PHONY: all .lua
 all: .lua $(BIN)/$(NAME)
 	${MAKE} -C po -j1 all
@@ -121,11 +108,11 @@ all: .lua $(BIN)/$(NAME)
 
 $(OBJ)/%.o: $(SRC)/%.c
 	@mkdir -p $(OBJ)
-	$(CC) $(LOCAL_CFLAGS) $(LOCAL_CPPFLAGS) -c $< -o $@
+	$(V_CC)$(CC) $(LOCAL_CFLAGS) $(LOCAL_CPPFLAGS) -c $< -o $@
 
 $(BIN)/$(NAME): $(OBJECTS)
 	@mkdir -p -- $(BIN)
-	$(CC) $(LOCAL_CFLAGS) $(LOCAL_LDFLAGS) $(OBJECTS) -o $(PROG) $(LIBS)
+	$(V_CC)$(CC) $(LOCAL_CFLAGS) $(LOCAL_LDFLAGS) $(OBJECTS) -o $(PROG) $(LIBS)
 
 .PHONY: clean
 clean:
@@ -149,7 +136,7 @@ uninstall:
 	${MAKE} -C po uninstall
 
 $(DEPEND):
-	$(CC) -MM $(LOCAL_CFLAGS) $(SRC)/*.c | sed -e "s/\([A-Za-z0-9+-0._&+-]*:\)/\$(OBJ)\/\1/g" > $(DEPEND)
+	$(V_DEP)$(CC) -MM $(LOCAL_CFLAGS) $(SRC)/*.c | sed -e "s/\([A-Za-z0-9+-0._&+-]*:\)/\$(OBJ)\/\1/g" > $(DEPEND)
 
 -include $(DEPEND)
 
