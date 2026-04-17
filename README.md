@@ -354,7 +354,7 @@ information:
     
   *(Available from version 0.46)*
 
-  * `get_active_workspace`
+* `get_active_workspace()`
   <a name="user-content-get-active-workspace" />
 
   Returns the index and name of the active workspace
