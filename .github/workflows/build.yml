@@ -16,7 +16,7 @@ jobs:
       LUA: lua${{ matrix.luaver }}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
       - name: Install Dependencies
         run: |
           sudo apt-get update -qq
