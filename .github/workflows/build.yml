@@ -1,14 +1,14 @@
 ---
 name: Build CI
 
-on: [push, pull_request]
+on: [push, pull_request, workflow_dispatch]
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     strategy:
       matrix:
-        compiler: [gcc-12, gcc-13]
+        compiler: [gcc-12, gcc-13, gcc-16]
         luaver: [5.2, 5.3, 5.4]
     env:
       PREFIX: /usr/local/bin
@@ -16,7 +16,7 @@ jobs:
       LUA: lua${{ matrix.luaver }}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
       - name: Install Dependencies
         run: |
           sudo apt-get update -qq
